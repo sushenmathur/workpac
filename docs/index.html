@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WorkPac Document to Markdown</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- In-browser conversion libraries (vendored locally — no external CDN) -->
+  <script src="vendor/pdf.min.js"></script>
+  <script src="vendor/mammoth.browser.min.js"></script>
+  <script src="vendor/xlsx.full.min.js"></script>
+  <script src="vendor/turndown.min.js"></script>
+
+  <style>
+    :root {
+      --teal: #00B097; --dark-green: #073A3D; --navy: #1B365D;
+      --light-blue: #8DD2E5; --gold: #FEC553; --red: #EE2937;
+      --teal-25: #D6EBE5; --ink: #0f1e1f; --muted: #5b6b6a; --border: #d9e2e0;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; color: var(--ink);
+      font-family: "Poppins", -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(160deg, var(--teal-25) 0%, #f6faf9 45%, #ffffff 100%);
+      min-height: 100vh;
+    }
+    header {
+      background: var(--dark-green); color: #fff;
+      padding: 20px 28px; display: flex; align-items: center; gap: 14px;
+    }
+    header .mark {
+      width: 34px; height: 34px; border-radius: 8px; background: var(--teal);
+      display: grid; place-items: center; font-weight: 600; color: var(--dark-green);
+    }
+    header .brand { font-weight: 600; letter-spacing: .2px; font-size: 1.05rem; }
+    header .brand small { display: block; font-weight: 400; opacity: .8; font-size: .72rem; }
+    main { max-width: 900px; margin: 0 auto; padding: 40px 24px 64px; }
+    h1 {
+      font-family: "DM Serif Display", Georgia, serif; color: var(--dark-green);
+      font-size: 2.1rem; margin: 0 0 6px; font-weight: 400;
+    }
+    .lede { color: var(--muted); margin: 0 0 28px; }
+    .card {
+      background: #fff; border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px; box-shadow: 0 8px 30px rgba(7,58,61,.06); margin-bottom: 22px;
+    }
+    label.field { display: block; font-weight: 600; margin-bottom: 10px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    input[type=file] { font-family: inherit; font-size: .95rem; }
+    .btn {
+      appearance: none; border: 0; cursor: pointer; font-family: inherit;
+      font-weight: 600; font-size: .95rem; background: var(--teal); color: #fff;
+      padding: 12px 22px; border-radius: 10px; transition: background .15s, transform .05s;
+    }
+    .btn:hover { background: #009a84; }
+    .btn:active { transform: translateY(1px); }
+    .btn:disabled { opacity: .55; cursor: default; }
+    .btn.secondary { background: var(--navy); }
+    .btn.secondary:hover { background: #16294a; }
+    .btn.ghost { background: transparent; color: var(--dark-green); border: 1px solid var(--border); }
+    .btn.ghost:hover { background: var(--teal-25); }
+    .hint { color: var(--muted); font-size: .82rem; margin-top: 14px; line-height: 1.5; }
+    .error { background: #fdeced; border: 1px solid #f6b6bc; color: #a01722;
+      padding: 12px 16px; border-radius: 10px; margin-top: 16px; font-size: .92rem; }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+    .meta { color: var(--muted); font-size: .88rem; margin: 0 0 14px; }
+    .meta strong { color: var(--dark-green); }
+    textarea#md {
+      width: 100%; min-height: 420px; resize: vertical;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: .85rem; line-height: 1.5; border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px; color: var(--ink); background: #fbfdfc;
+    }
+    .flash { color: var(--teal); font-weight: 600; font-size: .85rem; }
+    #result { display: none; }
+    footer { text-align: center; color: var(--muted); font-size: .78rem; padding: 8px 0 32px; }
+    footer .gm { color: var(--teal); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="mark">W</div>
+    <div class="brand">WorkPac<small>A Tasmea Company · Good Move</small></div>
+  </header>
+
+  <main>
+    <h1>Document to Markdown</h1>
+    <p class="lede">Select a file from your device and convert it to clean Markdown —
+       everything runs in your browser, so the file never leaves your device.</p>
+
+    <div class="card">
+      <label class="field" for="file">Choose a file</label>
+      <div class="row">
+        <input type="file" id="file"
+               accept=".pdf,.docx,.xlsx,.xls,.csv,.html,.htm,.txt,.md">
+        <button class="btn" id="convert" disabled>Convert to Markdown</button>
+      </div>
+      <p class="hint">
+        Supported in the browser: PDF, Word (.docx), Excel (.xlsx/.xls), CSV, HTML and text.<br>
+        <strong>Private:</strong> conversion happens locally — nothing is uploaded to any server.
+      </p>
+      <div class="error" id="error" style="display:none;"></div>
+    </div>
+
+    <div class="card" id="result">
+      <p class="meta" id="meta"></p>
+      <div class="toolbar">
+        <button class="btn" id="download">Download .md</button>
+        <button class="btn secondary" id="copy">Copy Markdown</button>
+        <button class="btn ghost" id="reset">Convert another</button>
+        <span class="flash" id="flash"></span>
+      </div>
+      <textarea id="md" readonly></textarea>
+    </div>
+  </main>
+
+  <footer>
+    Powered by in-browser conversion · Handle candidate &amp; client data per the
+    Australian Privacy Principles · <span class="gm">Good Move</span>
+  </footer>
+
+  <script>
+    // pdf.js worker (matches the library version loaded above).
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdf.worker.min.js";
+    }
+
+    var fileInput = document.getElementById('file');
+    var convertBtn = document.getElementById('convert');
+    var errorBox = document.getElementById('error');
+    var resultCard = document.getElementById('result');
+    var mdArea = document.getElementById('md');
+    var metaEl = document.getElementById('meta');
+    var flash = document.getElementById('flash');
+    var currentName = 'document.md';
+
+    fileInput.addEventListener('change', function () {
+      convertBtn.disabled = !fileInput.files.length;
+      hideError();
+    });
+
+    convertBtn.addEventListener('click', runConversion);
+    document.getElementById('reset').addEventListener('click', function () {
+      resultCard.style.display = 'none';
+      fileInput.value = '';
+      convertBtn.disabled = true;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    document.getElementById('download').addEventListener('click', function () {
+      var blob = new Blob([mdArea.value], { type: 'text/markdown' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = currentName;
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showFlash('Downloaded');
+    });
+
+    document.getElementById('copy').addEventListener('click', function () {
+      navigator.clipboard.writeText(mdArea.value)
+        .then(function () { showFlash('Copied to clipboard'); },
+              function () { mdArea.select(); document.execCommand('copy'); showFlash('Copied'); });
+    });
+
+    function showFlash(msg) {
+      flash.textContent = msg;
+      setTimeout(function () { flash.textContent = ''; }, 2000);
+    }
+    function showError(msg) { errorBox.textContent = msg; errorBox.style.display = 'block'; }
+    function hideError() { errorBox.style.display = 'none'; }
+
+    async function runConversion() {
+      var file = fileInput.files[0];
+      if (!file) return;
+      hideError();
+      convertBtn.disabled = true;
+      convertBtn.textContent = 'Converting…';
+
+      var ext = (file.name.split('.').pop() || '').toLowerCase();
+      try {
+        var markdown;
+        if (ext === 'pdf') {
+          markdown = await convertPdf(file);
+        } else if (ext === 'docx') {
+          markdown = await convertDocx(file);
+        } else if (ext === 'xlsx' || ext === 'xls' || ext === 'csv') {
+          markdown = await convertSpreadsheet(file);
+        } else if (ext === 'html' || ext === 'htm') {
+          markdown = htmlToMarkdown(await file.text());
+        } else if (ext === 'txt' || ext === 'md') {
+          markdown = await file.text();
+        } else {
+          throw new Error("Unsupported file type '." + ext + "'. Try PDF, Word, Excel, CSV, HTML or text.");
+        }
+
+        currentName = (file.name.replace(/\.[^.]+$/, '') || 'document') + '.md';
+        mdArea.value = markdown;
+        var lines = markdown ? markdown.split('\n').length : 0;
+        metaEl.innerHTML = 'Converted <strong>' + escapeHtml(file.name) +
+          '</strong> → <strong>' + escapeHtml(currentName) + '</strong> · ' + lines + ' lines';
+        resultCard.style.display = 'block';
+        resultCard.scrollIntoView({ behavior: 'smooth' });
+      } catch (err) {
+        showError(err && err.message ? err.message : String(err));
+      } finally {
+        convertBtn.disabled = false;
+        convertBtn.textContent = 'Convert to Markdown';
+      }
+    }
+
+    async function convertPdf(file) {
+      var buf = await file.arrayBuffer();
+      var pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+      var pages = [];
+      for (var i = 1; i <= pdf.numPages; i++) {
+        var page = await pdf.getPage(i);
+        var content = await page.getTextContent();
+        pages.push(reconstructLines(content.items));
+      }
+      return pages.join('\n\n');
+    }
+
+    // Group text items into lines by their vertical position, preserving order.
+    function reconstructLines(items) {
+      var lines = [];
+      var current = [];
+      var lastY = null;
+      items.forEach(function (it) {
+        var y = it.transform ? Math.round(it.transform[5]) : 0;
+        if (lastY !== null && Math.abs(y - lastY) > 2) {
+          lines.push(current.join(' ').replace(/\s+/g, ' ').trim());
+          current = [];
+        }
+        if (it.str) current.push(it.str);
+        lastY = y;
+      });
+      if (current.length) lines.push(current.join(' ').replace(/\s+/g, ' ').trim());
+      return lines.filter(function (l) { return l.length; }).join('\n');
+    }
+
+    async function convertDocx(file) {
+      var buf = await file.arrayBuffer();
+      var res = await mammoth.convertToHtml({ arrayBuffer: buf });
+      return htmlToMarkdown(res.value);
+    }
+
+    function htmlToMarkdown(html) {
+      var td = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced' });
+      return td.turndown(html);
+    }
+
+    async function convertSpreadsheet(file) {
+      var buf = await file.arrayBuffer();
+      var wb = XLSX.read(buf, { type: 'array' });
+      var out = [];
+      wb.SheetNames.forEach(function (name) {
+        var rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { header: 1, blankrows: false });
+        if (!rows.length) return;
+        if (wb.SheetNames.length > 1) out.push('## ' + name + '\n');
+        out.push(rowsToMarkdownTable(rows));
+      });
+      return out.join('\n\n').trim();
+    }
+
+    function rowsToMarkdownTable(rows) {
+      var width = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+      function cell(v) { return (v === undefined || v === null ? '' : String(v)).replace(/\|/g, '\\|').replace(/\n/g, ' '); }
+      function line(r) {
+        var cells = [];
+        for (var i = 0; i < width; i++) cells.push(cell(r[i]));
+        return '| ' + cells.join(' | ') + ' |';
+      }
+      var md = [line(rows[0]), '| ' + Array(width).fill('---').join(' | ') + ' |'];
+      for (var i = 1; i < rows.length; i++) md.push(line(rows[i]));
+      return md.join('\n');
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+  </script>
+</body>
+</html>

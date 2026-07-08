@@ -82,6 +82,36 @@ Then open <http://127.0.0.1:5000> in your browser. Set a different port with
 > only upload what a task requires. This app runs locally and does not store
 > files after conversion.
 
+## Browser-only version (GitHub Pages)
+
+`docs/` contains a **static, browser-only** converter that needs no server —
+suitable for hosting on GitHub Pages. You browse for a file, it is converted to
+Markdown **entirely in your browser**, and you can preview, copy or download the
+result. Because nothing is uploaded, the file never leaves your device.
+
+Conversion libraries are **vendored** in `docs/vendor/` (pdf.js, mammoth,
+SheetJS, Turndown) so the app has no external CDN dependency.
+
+### Differences from the Python app
+
+- Runs client-side in JavaScript — it does **not** use the Python `markitdown`
+  library, so output is not identical.
+- Supports the common formats: PDF, Word (.docx), Excel (.xlsx/.xls), CSV, HTML
+  and text. (No audio, images-with-OCR, or the full markitdown format list.)
+- PDF text extraction is best-effort and may include minor spacing artefacts on
+  complex layouts.
+
+### Enable GitHub Pages
+
+1. In the repository on GitHub, go to **Settings → Pages**.
+2. Under **Build and deployment → Source**, choose **Deploy from a branch**.
+3. Select the branch, set the folder to **`/docs`**, and **Save**.
+4. After a minute the site publishes at `https://<owner>.github.io/workpac/`.
+
+> GitHub Pages on a **private** repository requires a paid GitHub plan. On a
+> public repository it is free. Since this tool handles personal data, review
+> hosting with your IT/security team before publishing it publicly.
+
 ---
 
 *WorkPac Brand Style Guide is available on SharePoint: Marketing Toolbox >
