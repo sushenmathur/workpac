@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ md_name }} — WorkPac Document to Markdown{% endblock %}
+
+{% block extra_css %}
+    .meta { color: var(--muted); font-size: .88rem; margin: 0 0 18px; }
+    .meta strong { color: var(--dark-green); }
+    .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    textarea#md {
+      width: 100%; min-height: 420px; resize: vertical;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: .85rem; line-height: 1.5;
+      border: 1px solid var(--border); border-radius: 12px; padding: 16px;
+      color: var(--ink); background: #fbfdfc;
+    }
+    .ok-flash { color: var(--teal); font-weight: 600; font-size: .85rem; margin-left: 6px; }
+{% endblock %}
+
+{% block content %}
+  <h1>Your Markdown is ready</h1>
+  <p class="meta">Converted <strong>{{ source_name }}</strong> → <strong>{{ md_name }}</strong>
+     · {{ line_count }} lines</p>
+
+  <div class="card">
+    <div class="toolbar">
+      <button class="btn" id="download-btn">Download {{ md_name }}</button>
+      <button class="btn secondary" id="copy-btn">Copy Markdown</button>
+      <a class="btn ghost" href="/">Convert another</a>
+      <span class="ok-flash" id="flash"></span>
+    </div>
+
+    <textarea id="md" readonly>{{ markdown }}</textarea>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  var mdName = {{ md_name | tojson }};
+  var textarea = document.getElementById('md');
+  var flash = document.getElementById('flash');
+
+  function showFlash(msg) {
+    flash.textContent = msg;
+    setTimeout(function () { flash.textContent = ''; }, 2000);
+  }
+
+  document.getElementById('download-btn').addEventListener('click', function () {
+    var blob = new Blob([textarea.value], { type: 'text/markdown' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = mdName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showFlash('Downloaded');
+  });
+
+  document.getElementById('copy-btn').addEventListener('click', function () {
+    navigator.clipboard.writeText(textarea.value).then(function () {
+      showFlash('Copied to clipboard');
+    }, function () {
+      textarea.select();
+      document.execCommand('copy');
+      showFlash('Copied');
+    });
+  });
+</script>
+{% endblock %}

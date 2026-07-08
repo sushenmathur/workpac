@@ -2,3 +2,6 @@
 # https://github.com/microsoft/markitdown
 # The [all] extra pulls in every optional format handler.
 markitdown[all]==0.1.6
+
+# Web app (browse-file UI wrapping markitdown) — see app.py
+Flask>=3.0,<4.0

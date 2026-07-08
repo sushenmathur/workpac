@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h1>Document to Markdown</h1>
+  <p class="lede">Browse for a document and convert it to clean Markdown you can drop
+     straight into a chat or report.</p>
+
+  {% if error %}
+    <div class="error">{{ error }}</div>
+  {% endif %}
+
+  <div class="card">
+    <form method="post" action="/convert" enctype="multipart/form-data" id="convert-form">
+      <label for="document" style="display:block;font-weight:600;margin-bottom:10px;">
+        Choose a file
+      </label>
+
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <input type="file" name="document" id="document"
+               accept="{{ allowed | join(',') }}"
+               style="font-family:inherit;font-size:.95rem;">
+        <button type="submit" class="btn" id="submit-btn">Convert to Markdown</button>
+      </div>
+
+      <p class="hint">
+        Supported: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), HTML, CSV,
+        images and more. Maximum 32&nbsp;MB.<br>
+        Files are converted in-session and not stored after conversion.
+      </p>
+    </form>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Give immediate feedback while the server converts.
+  document.getElementById('convert-form').addEventListener('submit', function () {
+    var f = document.getElementById('document');
+    if (f.files.length) {
+      var btn = document.getElementById('submit-btn');
+      btn.textContent = 'Converting…';
+      btn.disabled = true;
+    }
+  });
+</script>
+{% endblock %}
