@@ -225,22 +225,59 @@
       return pages.join('\n\n');
     }
 
-    // Group text items into lines by their vertical position, preserving order.
+    // Reconstruct lines from pdf.js text items. pdf.js often splits a single
+    // word into several runs, so joining every run with a space produces
+    // spurious spaces ("workp lus"). Instead, infer a space only when there is
+    // a real horizontal gap between one run's end and the next run's start.
+    // Line breaks come from pdf.js EOL markers or a change in baseline height.
     function reconstructLines(items) {
       var lines = [];
-      var current = [];
-      var lastY = null;
-      items.forEach(function (it) {
-        var y = it.transform ? Math.round(it.transform[5]) : 0;
-        if (lastY !== null && Math.abs(y - lastY) > 2) {
-          lines.push(current.join(' ').replace(/\s+/g, ' ').trim());
-          current = [];
+      var parts = [];
+      var lineY = null;
+      var lastEndX = null;
+
+      function flush() {
+        if (parts.length) {
+          var text = parts.join('').replace(/[ \t]{2,}/g, ' ').trim();
+          if (text) lines.push(text);
         }
-        if (it.str) current.push(it.str);
-        lastY = y;
+        parts = [];
+        lastEndX = null;
+      }
+
+      items.forEach(function (it) {
+        var str = it.str || '';
+        var x = it.transform ? it.transform[4] : 0;
+        var y = it.transform ? it.transform[5] : 0;
+        var h = it.height || (it.transform ? Math.abs(it.transform[3]) : 10) || 10;
+
+        // New line when the baseline moves vertically.
+        if (lineY !== null && Math.abs(y - lineY) > Math.max(2, h * 0.5)) {
+          flush();
+          lineY = null;
+        }
+        if (lineY === null) lineY = y;
+
+        // Whitespace-only runs collapse to a single space.
+        if (str.trim() === '') {
+          if (parts.length && parts[parts.length - 1] !== ' ') parts.push(' ');
+          if (it.width) lastEndX = x + it.width;
+          if (it.hasEOL) { flush(); lineY = null; }
+          return;
+        }
+
+        // Insert a space only when the horizontal gap warrants one.
+        if (lastEndX !== null) {
+          var gap = x - lastEndX;
+          if (gap > h * 0.2 && parts[parts.length - 1] !== ' ') parts.push(' ');
+        }
+        parts.push(str);
+        lastEndX = x + (it.width || 0);
+
+        if (it.hasEOL) { flush(); lineY = null; }
       });
-      if (current.length) lines.push(current.join(' ').replace(/\s+/g, ' ').trim());
-      return lines.filter(function (l) { return l.length; }).join('\n');
+      flush();
+      return lines.join('\n');
     }
 
     async function convertDocx(file) {
