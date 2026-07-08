@@ -1,0 +1,4 @@
+# Document-to-Markdown conversion (PDF, Word, Excel, PowerPoint, HTML, images, audio)
+# https://github.com/microsoft/markitdown
+# The [all] extra pulls in every optional format handler.
+markitdown[all]==0.1.6
